@@ -4,6 +4,12 @@
     Balances between PC time and "outside" time.
     2x outside = pc
 
+    - Unfortunatly, for now, the PC really has to be disconnected
+      from the power source for the USB port to "shut off".
+      
+    - Also the power source needs to be connected to my pc.
+      I don't know why.
+
     Parts:
       Arduino Uno
       2.8" TFT Touchscreen
@@ -46,33 +52,30 @@ int minutes = 0;
 typedef enum {pc, play} mode;
 mode cur_mode = play;
 
+//integers that fill, when it checks for a running computer
 int highs = 0;
 int lows = 0;
 
 void setup() {
   Serial.begin(9600);
 
+//that's where Modis PC is connected
   pinMode(A5, INPUT);
   
   tft.reset();
   tft.begin(0x9341);
   tft.setRotation(3);
 
+//print all the static text and stuff
   tft.fillScreen(BLACK);
-  
   tft.setTextColor(YELLOW);
   tft.setTextSize(3);
-
   tft.setCursor(10, 10);
-  tft.print("PC-Time:");
-  
-  tft.drawFastHLine(0, tft.height()/2, tft.width(), YELLOW);
-  
+  tft.print("PC-Time:");  
+  tft.drawFastHLine(0, tft.height()/2, tft.width(), YELLOW);  
   tft.setCursor(10, tft.height()/2+10);
   tft.print("Play outside:");
-  
-  tft.setTextSize(7);
-  
+  tft.setTextSize(7);  
   tft.setCursor(132, 50);
   tft.print(":");
   tft.setCursor(132, tft.height()/2+50);
@@ -81,15 +84,6 @@ void setup() {
 
 void loop() {
   
-//  check_pcstatus();
-/*
-//later: if pc is on
-  if (timer > 200)
-    cur_mode = pc;
-//later: if pc is off  
-  if (timer < -200)
-    cur_mode = play;
-*/
   count_time();
 
   overdraw();
@@ -98,6 +92,7 @@ void loop() {
 
 }
 
+//overdraw the times with black rectangles
 void overdraw() {
   
   //overdraw the upper hours
@@ -111,6 +106,7 @@ void overdraw() {
   tft.fillRect(170, tft.height()/2+50, 78, 49, BLACK);
 }
 
+//print the time
 void print_time(mode cur_mode, int hours, int minutes) {
     
   if (timer  >= 0) {
@@ -158,18 +154,18 @@ void count_time() {
     check_pcstatus();
   }
   
-//  Serial.print("HIGHS: ");
-//  Serial.println(highs);
-//  Serial.print("LOWS: ");
-//  Serial.println(lows);
+  Serial.print("HIGHS: ");
+  Serial.println(highs);
+  Serial.print("LOWS: ");
+  Serial.println(lows);
 
-  if (lows > 0) {
-//    Serial.println("lows happened -> off");
+  if (lows > 3000) {
+    Serial.println("more lows than highs -> off");
     cur_mode = play;
     timer += 2;
   }
-  else if (highs > lows) {
-//  Serial.println("more highs -> on");
+  else if (highs > 3000) {
+  Serial.println("more highs than lows -> on");
     cur_mode = pc;
     timer -= 1;
   }
@@ -178,7 +174,7 @@ void count_time() {
 void check_pcstatus() {
 
 //if PC is on...A5 is "connected", only highs happen
-//if PC is off..A5 is "not connected, lows happen
+//if PC is off..A5 is "not connected", only lows happen
   if (digitalRead (A5) == HIGH) {
     highs += 1;
   }
