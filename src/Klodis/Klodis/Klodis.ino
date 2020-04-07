@@ -83,12 +83,12 @@ void setup() {
 }
 
 void loop() {
+    
+  print_time(cur_mode, abs(timer/60), abs(timer%60));
   
   count_time();
 
   overdraw();
-  
-  print_time(cur_mode, abs(timer/60), abs(timer%60));
 
 }
 
@@ -108,7 +108,9 @@ void overdraw() {
 
 //print the time
 void print_time(mode cur_mode, int hours, int minutes) {
-    
+  
+  tft.setTextSize(7);
+  
   if (timer  >= 0) {
 
     if (hours <= 9)
@@ -150,10 +152,13 @@ void count_time() {
   lows = 0;
   
   for (int i = 0; i<6000; i++) {
+    if (i%100 == 0) {
+      print_indicator();
+    }
     delay(10);
     check_pcstatus();
   }
-  
+
   Serial.print("HIGHS: ");
   Serial.println(highs);
   Serial.print("LOWS: ");
@@ -171,14 +176,38 @@ void count_time() {
   }
 }
 
-void check_pcstatus() {
+int check_pcstatus() {
 
+    
 //if PC is on...A5 is "connected", only highs happen
 //if PC is off..A5 is "not connected", only lows happen
   if (digitalRead (A5) == HIGH) {
     highs += 1;
+    return 1;  
   }
   else {
     lows += 1;
+    return 0;
+  }
+}
+
+void print_indicator() {
+  
+  tft.setTextSize(3);
+  tft.setTextColor(BLACK);
+  tft.setCursor(tft.width()-100, 10);
+  tft.print("(ON)");
+  tft.setCursor(tft.width()-100, 10);
+  tft.print("(OFF)");
+  
+  if (check_pcstatus() == 1) {
+    tft.setTextColor(YELLOW);
+    tft.setCursor(tft.width()-100, 10);
+    tft.print("(ON)");
+  }
+  else{
+    tft.setTextColor(YELLOW);
+    tft.setCursor(tft.width()-100, 10);
+    tft.print("(OFF)");
   }
 }
