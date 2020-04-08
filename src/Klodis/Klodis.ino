@@ -110,7 +110,7 @@ void loop() {
       }
     }
     //wait a second
-    delay(500);
+    delay(1000);
   }
 
   if (PCis < 0)
