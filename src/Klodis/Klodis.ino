@@ -126,10 +126,22 @@ void blinkDOTS(int second) {
   // second is even, show yellow dots
   if (second%2 == 0) {
     tft.setTextColor(YELLOW);
-    tft.setCursor(132, 50);
-    tft.print(":");
-    tft.setCursor(132, tft.height()/2+50);
-    tft.print(":");
+
+    // Only blink the dotson the active "side"
+    if (timer == 0) {
+      tft.setCursor(132, 50);
+      tft.print(":");
+      tft.setCursor(132, tft.height()/2+50);
+      tft.print(":");
+    }
+    else if (timer > 0) {
+      tft.setCursor(132, 50);
+      tft.print(":");
+    }
+    else {
+      tft.setCursor(132, tft.height()/2+50);
+      tft.print(":");
+    }
   }
   // second is odd, "show" black dots
   else {
@@ -160,8 +172,22 @@ void printTIME() {
   tft.setTextSize(7);
   tft.setTextColor(YELLOW);
 
-  //time left on the PC
-  if (timer >= 0) {
+  // Time is even
+  if (timer == 0) {
+    
+    
+    tft.setCursor(93, 50);
+    tft.print("0");
+    tft.setCursor(170, 50);
+    tft.print("00");
+  
+    tft.setCursor(93, tft.height()/2+50);
+    tft.print("0");
+    tft.setCursor(170, tft.height()/2+50);
+    tft.print("00");
+  }
+  // Time left to play PC
+  else if (timer >= 0) {
       
     if (hours <= 9)
       tft.setCursor(93, 50);
@@ -179,13 +205,8 @@ void printTIME() {
       tft.setCursor(170, 50);
       
     tft.print(minutes);
-    
-    tft.setCursor(93, tft.height()/2+50);
-    tft.print("0");
-    tft.setCursor(170, tft.height()/2+50);
-    tft.print("00");
   }
-  //time to go outside
+  // Time needed to spend "outside"
   else {
 
     hours = hours/2;
@@ -203,16 +224,11 @@ void printTIME() {
       tft.print("0");
       tft.setCursor(213, tft.height()/2+50);
     }
-    else
+    else 
       tft.setCursor(170, tft.height()/2+50);
       
     tft.print(minutes);
-    
-    tft.setCursor(93, 50);
-    tft.print("0");
-    tft.setCursor(170, 50);
-    tft.print("00");
-  }
+    }
 }
 
 PCmode checkPC() {
