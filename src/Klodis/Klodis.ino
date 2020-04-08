@@ -1,4 +1,4 @@
-/* (C)2020 Benji Schmid
+/* (C)2020 Benji
 
     Klodis is a clock to manage Modis gaming habits.
     Balances between PC time and "outside" time.
@@ -13,21 +13,27 @@
     Parts:
       Arduino Uno
       2.8" TFT Touchscreen
+      DS3231 clock
 */
 
-#include <Adafruit_GFX.h>    // Core graphics library
-#include <Adafruit_TFTLCD.h> // Hardware-specific library
+#include <Adafruit_GFX.h>     // Core graphics library
+#include <Adafruit_TFTLCD.h>  // Hardware-specific library
+#include <DS3231.h>           // clock library
 
 // The control pins for the LCD can be assigned to any digital or
 // analog pins...but we'll use the analog pins as this allows us to
 // double up the pins with the touch screen (see the TFT paint example).
-#define LCD_RESET A4 // Can alternately just connect to Arduino's reset pin
-#define LCD_CS A3 // Chip Select goes to Analog 3
-#define LCD_CD A2 // Command/Data goes to Analog 2
-#define LCD_WR A1 // LCD Write goes to Analog 1
-#define LCD_RD A0 // LCD Read goes to Analog 0
+#define LCD_RESET PC6 //A4 // Can alternately just connect to Arduino's reset pin (PC6)
+#define LCD_CS A3     // Chip Select goes to Analog 3
+#define LCD_CD A2     // Command/Data goes to Analog 2
+#define LCD_WR A1     // LCD Write goes to Analog 1
+#define LCD_RD A0     // LCD Read goes to Analog 0
 
+// Init the display
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+
+// Init the DS3231 using the hardware interface
+DS3231  rtc(SDA, SCL);
 
 // Assign human-readable names to some common 16-bit color values:
 #define BLACK     0x0000
@@ -43,30 +49,30 @@ Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 #define YELLOW    0xFFE0
 #define ORANGE    0xFBE0
 
-//Stores the minutes that need to be balanced
+// Stores the minutes that need to be balanced
 int timer = 0;
-int hours = 0;
-int minutes = 0;
 
-//to see in what mode we are in
-typedef enum {pc, play} mode;
-mode cur_mode = play;
+// Enum to see if the PC is turned on
+typedef enum {OFF, ON} PCmode;
 
-//integers that fill, when it checks for a running computer
-int highs = 0;
-int lows = 0;
+// Integer to check for a running computer
+int PCis;
 
 void setup() {
+  
   Serial.begin(9600);
 
-//that's where Modis PC is connected
+  // Initialize the rtc object
+  rtc.begin();
+  
+  // That's where Módís' PC is connected to
   pinMode(A5, INPUT);
   
   tft.reset();
   tft.begin(0x9341);
   tft.setRotation(3);
 
-//print all the static text and stuff
+  //print all the static text and stuff
   tft.fillScreen(BLACK);
   tft.setTextColor(YELLOW);
   tft.setTextSize(3);
@@ -75,25 +81,68 @@ void setup() {
   tft.drawFastHLine(0, tft.height()/2, tft.width(), YELLOW);  
   tft.setCursor(10, tft.height()/2+10);
   tft.print("Play outside:");
-  tft.setTextSize(7);  
-  tft.setCursor(132, 50);
-  tft.print(":");
-  tft.setCursor(132, tft.height()/2+50);
-  tft.print(":");
 }
 
 void loop() {
-    
-  print_time(cur_mode, abs(timer/60), abs(timer%60));
+
+  PCis = 0;
+
+  printTIME();
   
-  count_time();
+  //run this loop every second for one minute
+  for (int i = 1; i<61; i++) {
 
-  overdraw();
+    blinkDOTS(i);
+    
+    //check the pc ever 12 seconds
+    if (i%12 == 0) {
 
+      // PCis after 5 checks per minute:
+      // positive if mostly ON
+      // negative if mostly OFF
+      if (checkPC() == ON) {
+        PCis += 1;
+        printINDICATOR(ON);
+      }
+      else {
+        PCis -= 1;
+        printINDICATOR(OFF);
+      }
+    }
+    //wait a second
+    delay(500);
+  }
+
+  if (PCis < 0)
+    timer += 2;
+  else
+    timer -= 1;
 }
 
-//overdraw the times with black rectangles
-void overdraw() {
+void blinkDOTS(int second) {
+
+  tft.setTextSize(7);
+    
+  // second is even, show yellow dots
+  if (second%2 == 0) {
+    tft.setTextColor(YELLOW);
+    tft.setCursor(132, 50);
+    tft.print(":");
+    tft.setCursor(132, tft.height()/2+50);
+    tft.print(":");
+  }
+  // second is odd, "show" black dots
+  else {
+    tft.setTextColor(BLACK);
+    tft.setCursor(132, 50);
+    tft.print(":");
+    tft.setCursor(132, tft.height()/2+50);
+    tft.print(":");
+  }
+}
+
+//print the time
+void printTIME() {
   
   //overdraw the upper hours
   tft.fillRect(50, 50, 78, 49, BLACK);
@@ -104,19 +153,21 @@ void overdraw() {
   tft.fillRect(50, tft.height()/2+50, 78, 49, BLACK);
   //overdraw the lower minutes
   tft.fillRect(170, tft.height()/2+50, 78, 49, BLACK);
-}
 
-//print the time
-void print_time(mode cur_mode, int hours, int minutes) {
-  
+  int hours = abs(timer/60);
+  int minutes = abs(timer%60);
+    
   tft.setTextSize(7);
-  
-  if (timer  >= 0) {
+  tft.setTextColor(YELLOW);
 
+  //time left on the PC
+  if (timer >= 0) {
+      
     if (hours <= 9)
       tft.setCursor(93, 50);
     else
       tft.setCursor(50, 50);
+      
     tft.print(hours);
     
     if (minutes <= 9) {
@@ -126,13 +177,25 @@ void print_time(mode cur_mode, int hours, int minutes) {
     }
     else
       tft.setCursor(170, 50);
+      
     tft.print(minutes);
+    
+    tft.setCursor(93, tft.height()/2+50);
+    tft.print("0");
+    tft.setCursor(170, tft.height()/2+50);
+    tft.print("00");
   }
+  //time to go outside
   else {
+
+    hours = hours/2;
+    minutes = minutes/2;
+
     if (hours <= 9)
       tft.setCursor(93, tft.height()/2+50);
     else
       tft.setCursor(50, tft.height()/2+50);
+      
     tft.print(hours);
     
     if (minutes <= 9) {
@@ -142,72 +205,40 @@ void print_time(mode cur_mode, int hours, int minutes) {
     }
     else
       tft.setCursor(170, tft.height()/2+50);
+      
     tft.print(minutes);
+    
+    tft.setCursor(93, 50);
+    tft.print("0");
+    tft.setCursor(170, 50);
+    tft.print("00");
   }
 }
 
-void count_time() {
-  
-  highs = 0;
-  lows = 0;
-  
-  for (int i = 0; i<6000; i++) {
-    if (i%100 == 0) {
-      print_indicator();
-    }
-    delay(10);
-    check_pcstatus();
-  }
-
-  Serial.print("HIGHS: ");
-  Serial.println(highs);
-  Serial.print("LOWS: ");
-  Serial.println(lows);
-
-  if (lows > 3000) {
-    Serial.println("more lows than highs -> off");
-    cur_mode = play;
-    timer += 2;
-  }
-  else if (highs > 3000) {
-  Serial.println("more highs than lows -> on");
-    cur_mode = pc;
-    timer -= 1;
-  }
-}
-
-int check_pcstatus() {
-
+PCmode checkPC() {
     
 //if PC is on...A5 is "connected", only highs happen
 //if PC is off..A5 is "not connected", only lows happen
   if (digitalRead (A5) == HIGH) {
-    highs += 1;
-    return 1;  
+    return ON;
   }
   else {
-    lows += 1;
-    return 0;
+    return OFF;
   }
 }
 
-void print_indicator() {
-  
+void printINDICATOR(PCmode PC) {
+
+  // Overdraw the last PC status
+  tft.fillRect(tft.width()-100, 10, 85, 21, BLACK);
+
+  // Draw the new status
   tft.setTextSize(3);
-  tft.setTextColor(BLACK);
+  tft.setTextColor(YELLOW);
   tft.setCursor(tft.width()-100, 10);
-  tft.print("(ON)");
-  tft.setCursor(tft.width()-100, 10);
-  tft.print("(OFF)");
-  
-  if (check_pcstatus() == 1) {
-    tft.setTextColor(YELLOW);
-    tft.setCursor(tft.width()-100, 10);
+
+  if (PC == ON)
     tft.print("(ON)");
-  }
-  else{
-    tft.setTextColor(YELLOW);
-    tft.setCursor(tft.width()-100, 10);
+  else
     tft.print("(OFF)");
-  }
 }
