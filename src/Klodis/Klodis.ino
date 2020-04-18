@@ -1,20 +1,18 @@
 /* (C)2020 Benji
+ *  Version 1.0
 
     Klodis is a clock to manage Modis gaming habits.
     Balances between PC time and "outside" time.
     2x outside = pc
-
-    - Unfortunatly, for now, the PC really has to be disconnected
-      from the power source for the USB port to "shut off".
-      
-    - Also the power source needs to be connected to my pc.
-      I don't know why.
-
+    
     Parts:
-      Arduino Uno
+      Arduino Mega
       2.8" TFT Touchscreen
       DS3231 clock
 */
+
+//#define DEBUG
+#define INFORMATION
 
 #include <Adafruit_GFX.h>     // Core graphics library
 #include <Adafruit_TFTLCD.h>  // Hardware-specific library
@@ -25,15 +23,25 @@
 // double up the pins with the touch screen (see the TFT paint example).
 #define LCD_RESET PC6 //A4 // Can alternately just connect to Arduino's reset pin (PC6)
 #define LCD_CS A3     // Chip Select goes to Analog 3
-#define LCD_CD A2     // Command/Data goes to Analog 2
+#define LCD_CD A2     // Command/Data goes to Analog 2 //sometimes: LCD_RS
 #define LCD_WR A1     // LCD Write goes to Analog 1
 #define LCD_RD A0     // LCD Read goes to Analog 0
+
+#define MODIS A11     // Where Módís PC is connected to
 
 // Init the display
 Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
+
+// To store the actual time
+Time now;
+// To store the actual UNIXtime
+long unixTime;
+
+// Boolean to switch the device off when it's sleeping time
+bool sleepyTime = false;
 
 // Assign human-readable names to some common 16-bit color values:
 #define BLACK     0x0000
@@ -58,20 +66,17 @@ typedef enum {OFF, ON} PCmode;
 // Integer to check for a running computer
 int PCis;
 
-void setup() {
-  
-  Serial.begin(9600);
+// To "suspend" operation while everybody's asleep anyways
+long suspend = 0;
 
-  // Initialize the rtc object
-  rtc.begin();
-  
-  // That's where Módís' PC is connected to
-  pinMode(A5, INPUT);
-  
-  tft.reset();
-  tft.begin(0x9341);
-  tft.setRotation(3);
+void wakeUP() {
 
+#ifdef DEBUG
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.println("function: wakeUP()");
+#endif
+  
   //print all the static text and stuff
   tft.fillScreen(BLACK);
   tft.setTextColor(YELLOW);
@@ -83,40 +88,133 @@ void setup() {
   tft.print("Play outside:");
 }
 
+void setup() {
+  
+  Serial.begin(9600);
+  Serial.println("Serial initialized");
+
+  // Initialize the rtc object
+  rtc.begin();
+  Serial.println("rtc initialized");
+
+  // Get the time
+  now = rtc.getTime();
+  unixTime = rtc.getUnixTime(now);
+  Serial.println("Time taken");
+  Serial.print("UNIX: ");
+  Serial.println(rtc.getUnixTime(rtc.getTime()));
+  Serial.print("time: ");
+  Serial.println(rtc.getTimeStr());
+  
+  // That's where Módís' PC is connected to
+  pinMode(MODIS, INPUT);
+  
+  tft.reset();
+  tft.begin(0x9341);
+  tft.setRotation(3);
+  Serial.println("tft initialized");
+
+  wakeUP();
+  
+  Serial.println();
+  Serial.println("SETUP finished");
+#ifdef DEBUG
+  Serial.println("DEBUG activated");
+#else
+  Serial.println("DEBUG deactivated");
+#endif
+  Serial.println();
+}
+
 void loop() {
 
-  PCis = 0;
-
-  printTIME();
-  
-  //run this loop every second for one minute
-  for (int i = 1; i<61; i++) {
-
-    blinkDOTS(i);
+  // She has to get ready for bed at 22:00, so we can shut down
+  if ((!sleepyTime) && (now.hour == 22) && (now.min == 0)) {
     
-    //check the pc ever 12 seconds
-    if (i%12 == 0) {
-
-      // PCis after 5 checks per minute:
-      // positive if mostly ON
-      // negative if mostly OFF
-      if (checkPC() == ON) {
-        PCis += 1;
-        printINDICATOR(ON);
-      }
-      else {
-        PCis -= 1;
-        printINDICATOR(OFF);
-      }
-    }
-    //wait a second
-    delay(1000);
+#ifdef DEBUG
+    Serial.print(rtc.getTimeStr());
+    Serial.print(" - ");
+    Serial.println("sleepyTime");
+#endif
+    
+    sleepyTime = true;
+    tft.fillScreen(BLACK);
+    // Suspend for 20 minutes while everybody's asleep
+    suspend = 1200000;
   }
 
-  if (PCis < 0)
-    timer += 2;
-  else
-    timer -= 1;
+  // When it's after 7:00 and the PC is running, than she seems to be awake
+  if ((sleepyTime) && (now.hour >= 7) && (checkPC() == ON)) {
+
+#ifdef DEBUG
+    Serial.print(rtc.getTimeStr());
+    Serial.print(" - ");
+    Serial.println("!sleepyTime");
+#endif
+    
+    sleepyTime = false;
+    wakeUP();
+    suspend = 0;
+  }
+
+  // Do all of this only when everybody's awake
+  if (!sleepyTime) {
+    
+    PCis = 0;
+
+    printTIME();
+
+    //run this loop every second for one minute
+    for (int i = 1; i<61; i++) {
+
+      blinkDOTS(i);
+
+      //check the pc ever 12 seconds
+      if (i%12 == 0) {
+
+        // PCis after 5 checks per minute:
+        // positive if mostly ON
+        // negative if mostly OFF
+        if (checkPC() == ON) {
+          PCis += 1;
+          printINDICATOR(ON);
+        }
+        else {
+          PCis -= 1;
+          printINDICATOR(OFF);
+        }
+        
+#ifdef DEBUG
+        Serial.print(rtc.getTimeStr());
+        Serial.print(" - ");
+        Serial.print("PCis : ");
+        Serial.println(PCis);
+#endif
+      }
+      
+    //wait a second
+    delay(1000);
+    
+    // Get the times
+    Time now = rtc.getTime();
+    unixTime = rtc.getUnixTime(now);
+      
+    }
+
+#ifdef DEBUG
+    Serial.print(rtc.getTimeStr());
+    Serial.print(" - ");
+    Serial.print("final PCis : ");
+    Serial.println(PCis);
+#endif
+
+    // If PCis is positive or negative determines if the PC
+    // was mostly switched on or off in the last minute
+    if (PCis < 0)
+      timer += 2;
+    else
+      timer -= 1;
+  }
 }
 
 void blinkDOTS(int second) {
@@ -156,6 +254,14 @@ void blinkDOTS(int second) {
 //print the time
 void printTIME() {
   
+#ifdef DEBUG
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.print("function: printTime()");
+  Serial.print(" - timer : ");
+  Serial.print(timer);
+#endif
+
   //overdraw the upper hours
   tft.fillRect(50, 50, 78, 49, BLACK);
   //overdraw the upper minutes
@@ -175,6 +281,13 @@ void printTIME() {
   // Time is even
   if (timer == 0) {
     
+#ifdef DEBUG
+    Serial.println(" == 0");
+#endif
+
+#ifdef INFORMATION
+    Serial.print("Time is even.");
+#endif
     
     tft.setCursor(93, 50);
     tft.print("0");
@@ -188,7 +301,19 @@ void printTIME() {
   }
   // Time left to play PC
   else if (timer >= 0) {
-      
+    
+#ifdef DEBUG
+    Serial.println(" >= 0");
+#endif
+    
+#ifdef INFORMATION
+    Serial.print("You can play for ");
+    Serial.print(hours);
+    Serial.print(":");
+    Serial.print(minutes);
+    Serial.print(".");
+#endif
+    
     if (hours <= 9)
       tft.setCursor(93, 50);
     else
@@ -209,8 +334,20 @@ void printTIME() {
   // Time needed to spend "outside"
   else {
 
+#ifdef DEBUG
+    Serial.println(" < 0");
+#endif
+    
     hours = hours/2;
     minutes = minutes/2;
+    
+#ifdef INFORMATION
+    Serial.print("Please go out for ");
+    Serial.print(hours);
+    Serial.print(":");
+    Serial.print(minutes);
+    Serial.print(".");
+#endif
 
     if (hours <= 9)
       tft.setCursor(93, tft.height()/2+50);
@@ -229,22 +366,50 @@ void printTIME() {
       
     tft.print(minutes);
     }
+    
+#ifdef INFORMATION
+    Serial.print(" PC is ");
+    if (checkPC())
+      Serial.println("on!");
+    else
+      Serial.println("off!");
+#endif
 }
 
 PCmode checkPC() {
+  
+#ifdef DEBUG
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.print("function: checkPC()");
+#endif
+  
+//if PC is on...MODIS is "connected", only highs happen
+//if PC is off..MODIS is "not connected", only lows happen
+  if (digitalRead (MODIS) == HIGH) {
     
-//if PC is on...A5 is "connected", only highs happen
-//if PC is off..A5 is "not connected", only lows happen
-  if (digitalRead (A5) == HIGH) {
+#ifdef DEBUG
+    Serial.println(" - (ON)");
+#endif
     return ON;
   }
   else {
+    
+#ifdef DEBUG
+    Serial.println(" - (OFF)");
+#endif
     return OFF;
   }
 }
 
 void printINDICATOR(PCmode PC) {
 
+#ifdef DEBUG
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.print("function: printINDICATOR()");
+#endif
+  
   // Overdraw the last PC status
   tft.fillRect(tft.width()-100, 10, 85, 21, BLACK);
 
@@ -253,8 +418,18 @@ void printINDICATOR(PCmode PC) {
   tft.setTextColor(YELLOW);
   tft.setCursor(tft.width()-100, 10);
 
-  if (PC == ON)
+  if (PC == ON) {
     tft.print("(ON)");
-  else
+    
+#ifdef DEBUG
+    Serial.println(" - (ON)");
+#endif
+  }
+  else {
     tft.print("(OFF)");
+    
+#ifdef DEBUG
+    Serial.println(" - (OFF)");
+#endif
+  }
 }

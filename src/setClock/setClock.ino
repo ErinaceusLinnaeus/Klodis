@@ -1,6 +1,6 @@
 /* To set the DS3231 to a specific time and date
  *  (C) 2020 Benji
- *  Compile and upload takes exactly 19 seconds
+ *  Compile and upload takes exactly 4 seconds
 */
 
 #include <DS3231.h>
@@ -22,8 +22,8 @@ void setup(void) {
 
   //Zeit und Datum, die beim Anschalten gesetzt werden
   rtc.setDOW(SATURDAY);
-  rtc.setTime(12, 00, 19);
-  rtc.setDate(4, 11, 2020);
+  rtc.setTime(14, 21, 0);
+  rtc.setDate(18, 4, 2020);
   //Debugausgabe
   Serial.print("Clock set: ");
   Serial.print(rtc.getDOWStr());
