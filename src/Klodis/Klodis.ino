@@ -124,6 +124,12 @@ void setup() {
   Serial.println("DEBUG deactivated");
 #endif
   Serial.println();
+#ifdef INFORMATION
+  Serial.println("INFORMATION activated");
+#else
+  Serial.println("INFORMATION deactivated");
+#endif
+  Serial.println();
 }
 
 void loop() {
