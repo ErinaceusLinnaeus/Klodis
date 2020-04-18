@@ -22,7 +22,7 @@ void setup(void) {
 
   //Zeit und Datum, die beim Anschalten gesetzt werden
   rtc.setDOW(SATURDAY);
-  rtc.setTime(14, 21, 0);
+  rtc.setTime(22, 13, 40);
   rtc.setDate(18, 4, 2020);
   //Debugausgabe
   Serial.print("Clock set: ");

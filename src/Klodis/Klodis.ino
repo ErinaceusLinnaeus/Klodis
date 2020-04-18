@@ -12,7 +12,8 @@
 */
 
 //#define DEBUG
-#define INFORMATION
+//#define TIMEDEBUG
+#define SERIALINFORMATION
 
 #include <Adafruit_GFX.h>     // Core graphics library
 #include <Adafruit_TFTLCD.h>  // Hardware-specific library
@@ -123,19 +124,27 @@ void setup() {
 #else
   Serial.println("DEBUG deactivated");
 #endif
-  Serial.println();
-#ifdef INFORMATION
-  Serial.println("INFORMATION activated");
+#ifdef TIMEDEBUG
+  Serial.println("TIMEDEBUG activated");
 #else
-  Serial.println("INFORMATION deactivated");
+  Serial.println("TIMEDEBUG deactivated");
+#endif
+#ifdef SERIALINFORMATION
+  Serial.println("SERIALINFORMATION activated");
+#else
+  Serial.println("SERIALINFORMATION deactivated");
 #endif
   Serial.println();
 }
 
 void loop() {
 
+  // Usually don't suspend. suspend = 0
+  // Suspend for 20 minutes while everybody's asleep
+  delay(suspend);
+
   // She has to get ready for bed at 22:00, so we can shut down
-  if ((!sleepyTime) && (now.hour == 22) && (now.min == 0)) {
+  if ((!sleepyTime) && (now.hour == 22)) {
     
 #ifdef DEBUG
     Serial.print(rtc.getTimeStr());
@@ -148,9 +157,8 @@ void loop() {
     // Suspend for 20 minutes while everybody's asleep
     suspend = 1200000;
   }
-
   // When it's after 7:00 and the PC is running, than she seems to be awake
-  if ((sleepyTime) && (now.hour >= 7) && (checkPC() == ON)) {
+  else if ((sleepyTime) && (now.hour < 22) && (now.hour >= 7) && (checkPC() == ON)) {
 
 #ifdef DEBUG
     Serial.print(rtc.getTimeStr());
@@ -198,8 +206,9 @@ void loop() {
 #endif
       }
       
-    //wait a second
-    delay(1000);
+    // Wait a second
+    // Almost a second... With delay(1000); we get 1 second too much every 3 minutes
+    delay(994);
     
     // Get the times
     Time now = rtc.getTime();
@@ -260,7 +269,7 @@ void blinkDOTS(int second) {
 //print the time
 void printTIME() {
   
-#ifdef DEBUG
+#ifdef TIMEDEBUG
   Serial.print(rtc.getTimeStr());
   Serial.print(" - ");
   Serial.print("function: printTime()");
@@ -277,9 +286,6 @@ void printTIME() {
   tft.fillRect(50, tft.height()/2+50, 78, 49, BLACK);
   //overdraw the lower minutes
   tft.fillRect(170, tft.height()/2+50, 78, 49, BLACK);
-
-  int hours = abs(timer/60);
-  int minutes = abs(timer%60);
     
   tft.setTextSize(7);
   tft.setTextColor(YELLOW);
@@ -287,12 +293,12 @@ void printTIME() {
   // Time is even
   if (timer == 0) {
     
-#ifdef DEBUG
+#ifdef TIMEDEBUG
     Serial.println(" == 0");
 #endif
 
-#ifdef INFORMATION
-    Serial.print("Time is even.");
+#ifdef SERIALINFORMATION
+    Serial.println("Time is even.");
 #endif
     
     tft.setCursor(93, 50);
@@ -308,18 +314,21 @@ void printTIME() {
   // Time left to play PC
   else if (timer >= 0) {
     
-#ifdef DEBUG
+#ifdef TIMEDEBUG
     Serial.println(" >= 0");
 #endif
     
-#ifdef INFORMATION
+    int hours = abs(timer/60);
+    int minutes = abs(timer%60);
+    
+#ifdef SERIALINFORMATION
     Serial.print("You can play for ");
     Serial.print(hours);
     Serial.print(":");
     Serial.print(minutes);
-    Serial.print(".");
+    Serial.println(".");
 #endif
-    
+      
     if (hours <= 9)
       tft.setCursor(93, 50);
     else
@@ -340,19 +349,19 @@ void printTIME() {
   // Time needed to spend "outside"
   else {
 
-#ifdef DEBUG
+#ifdef TIMEDEBUG
     Serial.println(" < 0");
 #endif
     
-    hours = hours/2;
-    minutes = minutes/2;
-    
-#ifdef INFORMATION
+    int hours = abs(timer/120);
+    int minutes = abs(timer%120) / 2;
+
+#ifdef SERIALINFORMATION
     Serial.print("Please go out for ");
     Serial.print(hours);
     Serial.print(":");
     Serial.print(minutes);
-    Serial.print(".");
+    Serial.println(".");
 #endif
 
     if (hours <= 9)
@@ -373,12 +382,14 @@ void printTIME() {
     tft.print(minutes);
     }
     
-#ifdef INFORMATION
-    Serial.print(" PC is ");
+#ifndef DEBUG
+  #ifdef SERIALINFORMATION
+    Serial.print("PC is ");
     if (checkPC())
       Serial.println("on!");
     else
       Serial.println("off!");
+  #endif
 #endif
 }
 
