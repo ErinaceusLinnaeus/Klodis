@@ -361,7 +361,7 @@ void printTIME() {
     Serial.print(hours);
     Serial.print(":");
     Serial.print(minutes);
-    Serial.println(".");
+    Serial.print(". ");
 #endif
 
     if (hours <= 9)
