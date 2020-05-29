@@ -15,14 +15,14 @@
 //#define TIMEDEBUG
 #define SERIALINFORMATION
 
-#include <Adafruit_GFX.h>     // Core graphics library
-#include <Adafruit_TFTLCD.h>  // Hardware-specific library
+#include <Elegoo_GFX.h>     // Core graphics library
+#include <Elegoo_TFTLCD.h>  // Hardware-specific library
 #include <DS3231.h>           // clock library
 
 // The control pins for the LCD can be assigned to any digital or
 // analog pins...but we'll use the analog pins as this allows us to
 // double up the pins with the touch screen (see the TFT paint example).
-#define LCD_RESET PC6 //A4 // Can alternately just connect to Arduino's reset pin (PC6)
+#define LCD_RESET  A4 // Can alternately just connect to Arduino's reset pin (PC6)
 #define LCD_CS A3     // Chip Select goes to Analog 3
 #define LCD_CD A2     // Command/Data goes to Analog 2 //sometimes: LCD_RS
 #define LCD_WR A1     // LCD Write goes to Analog 1
@@ -31,7 +31,7 @@
 #define MODIS A11     // Where Módís PC is connected to
 
 // Init the display
-Adafruit_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
+Elegoo_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
 
 // Init the DS3231 using the hardware interface
 DS3231  rtc(SDA, SCL);
@@ -144,12 +144,12 @@ void loop() {
   delay(suspend);
 
   // She has to get ready for bed at 22:00, so we can shut down
-  if ((!sleepyTime) && (now.hour == 22)) {
+  if ((!sleepyTime) && (now.hour >= 22)) {
     
-#ifdef DEBUG
+#ifdef SERIALINFORMATION
     Serial.print(rtc.getTimeStr());
     Serial.print(" - ");
-    Serial.println("sleepyTime");
+    Serial.println("System is asleep.");
 #endif
     
     sleepyTime = true;
@@ -160,10 +160,10 @@ void loop() {
   // When it's after 7:00 and the PC is running, than she seems to be awake
   else if ((sleepyTime) && (now.hour < 22) && (now.hour >= 7) && (checkPC() == ON)) {
 
-#ifdef DEBUG
+#ifdef SERIALINFORMATION
     Serial.print(rtc.getTimeStr());
     Serial.print(" - ");
-    Serial.println("!sleepyTime");
+    Serial.println("System is waking up.");
 #endif
     
     sleepyTime = false;
@@ -326,7 +326,7 @@ void printTIME() {
     Serial.print(hours);
     Serial.print(":");
     Serial.print(minutes);
-    Serial.println(".");
+    Serial.print(".");
 #endif
       
     if (hours <= 9)
