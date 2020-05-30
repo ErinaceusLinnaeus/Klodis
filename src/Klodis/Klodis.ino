@@ -13,7 +13,7 @@
 
 //#define DEBUG
 //#define TIMEDEBUG
-#define SERIALINFORMATION
+//#define SERIALINFORMATION
 
 #include <Elegoo_GFX.h>     // Core graphics library
 #include <Elegoo_TFTLCD.h>  // Hardware-specific library
@@ -29,6 +29,23 @@
 #define LCD_RD A0     // LCD Read goes to Analog 0
 
 #define MODIS A11     // Where Módís PC is connected to
+
+// The times Módís comes home from shool
+#define MONHOMEFROMSHOOL 14
+#define TUEHOMEFROMSHOOL 14
+#define WEDHOMEFROMSHOOL 14
+#define THUHOMEFROMSHOOL 14
+#define FRIHOMEFROMSHOOL 14
+#define WEEKENDAWAKE 8
+
+// The times Módís goes to sleep
+#define MONTIMETOSLEEP 21 
+#define TUETIMETOSLEEP 21
+#define WEDTIMETOSLEEP 21
+#define THUTIMETOSLEEP 21
+#define FRITIMETOSLEEP 22
+#define SATTIMETOSLEEP 22
+#define SUNTIMETOSLEEP 21
 
 // Init the display
 Elegoo_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
@@ -115,8 +132,6 @@ void setup() {
   tft.setRotation(3);
   Serial.println("tft initialized");
 
-  wakeUP();
-  
   Serial.println();
   Serial.println("SETUP finished");
 #ifdef DEBUG
@@ -135,16 +150,21 @@ void setup() {
   Serial.println("SERIALINFORMATION deactivated");
 #endif
   Serial.println();
+  
+  wakeUP();
 }
 
 void loop() {
 
+  // Get the time
+  now = rtc.getTime();
+  
   // Usually don't suspend. suspend = 0
   // Suspend for 20 minutes while everybody's asleep
   delay(suspend);
 
-  // She has to get ready for bed at 22:00, so we can shut down
-  if ((!sleepyTime) && (now.hour >= 22)) {
+  // Check, if it's time to go to sleep
+  if (checkTIME2SLEEP()) {
     
 #ifdef SERIALINFORMATION
     Serial.print(rtc.getTimeStr());
@@ -157,8 +177,9 @@ void loop() {
     // Suspend for 20 minutes while everybody's asleep
     suspend = 1200000;
   }
-  // When it's after 7:00 and the PC is running, than she seems to be awake
-  else if ((sleepyTime) && (now.hour < 22) && (now.hour >= 7) && (checkPC() == ON)) {
+
+  // Check if it's time to wake up
+  else if (checkTIME2WAKE()) {
 
 #ifdef SERIALINFORMATION
     Serial.print(rtc.getTimeStr());
@@ -229,6 +250,170 @@ void loop() {
       timer += 2;
     else
       timer -= 1;
+  }
+}
+
+int convertDAW2INT() {
+
+#ifdef DEBUG
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.println("function: convertDAW2INT()");
+#endif
+
+#ifdef TIMEDEBUG
+    Serial.print(rtc.getTimeStr());
+    Serial.print(" - It's ");
+#endif
+
+  if (rtc.getDOWStr(FORMAT_SHORT) == "Mon") {
+#ifdef TIMEDEBUG
+  Serial.println("Monday.");
+#endif
+    return 1;
+  }
+  if (rtc.getDOWStr(FORMAT_SHORT) == "Tue") {
+#ifdef TIMEDEBUG
+  Serial.println("Tuesday.");
+#endif
+    return 2;
+  }
+  if (rtc.getDOWStr(FORMAT_SHORT) == "Wed") {
+#ifdef TIMEDEBUG
+  Serial.println("Wednesday.");
+#endif
+    return 3;
+  }
+  if (rtc.getDOWStr(FORMAT_SHORT) == "Thu") {
+#ifdef TIMEDEBUG
+  Serial.println("Thursday.");
+#endif
+    return 4;
+  }
+  if (rtc.getDOWStr(FORMAT_SHORT) == "Fri") {
+#ifdef TIMEDEBUG
+  Serial.println("Friday.");
+#endif
+    return 5;
+  }
+  if (rtc.getDOWStr(FORMAT_SHORT) == "Sat") {
+#ifdef TIMEDEBUG
+  Serial.println("Saturday.");
+#endif
+    return 6;
+  }
+  if (rtc.getDOWStr(FORMAT_SHORT) == "Sun") {
+#ifdef TIMEDEBUG
+  Serial.println("Sunday.");
+#endif
+    return 7;
+  }
+}
+
+bool checkTIME2WAKE() {
+
+#ifdef DEBUG
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.println("function: checkTIME2WAKE()");
+#endif
+
+  int intDay = convertDAW2INT();
+
+#ifdef TIMEDEBUG
+    Serial.print(rtc.getTimeStr());
+    Serial.print(" - It's ");
+#endif
+
+  switch (intDay) {
+    case 1:
+      if (now.hour == MONHOMEFROMSHOOL)
+        return true;
+      else
+        return false;
+    case 2:
+      if (now.hour == TUEHOMEFROMSHOOL)
+        return true;
+      else
+        return false;
+    case 3:
+      if (now.hour == WEDHOMEFROMSHOOL)
+        return true;
+      else
+        return false;
+    case 4:
+      if (now.hour == THUHOMEFROMSHOOL)
+        return true;
+      else
+        return false;
+    case 5:
+      if (now.hour == FRIHOMEFROMSHOOL)
+        return true;
+      else
+        return false;
+    case 6:
+      if (now.hour == WEEKENDAWAKE)
+        return true;
+      else
+        return false;
+    case 7:
+      if (now.hour == WEEKENDAWAKE)
+        return true;
+      else
+        return false;
+    default:
+      return false;
+  }
+}
+
+bool checkTIME2SLEEP() {
+  
+#ifdef DEBUG
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.println("function: checkTIME2SLEEP()");
+#endif
+
+  int intDay = convertDAW2INT();
+
+  switch (intDay) {
+    case 1:
+      if (now.hour == MONTIMETOSLEEP)
+        return true;
+      else
+        return false;
+    case 2:
+      if (now.hour == TUETIMETOSLEEP)
+        return true;
+      else
+        return false;
+    case 3:
+      if (now.hour == WEDTIMETOSLEEP)
+        return true;
+      else
+        return false;
+    case 4:
+      if (now.hour == THUTIMETOSLEEP)
+        return true;
+      else
+        return false;
+    case 5:
+      if (now.hour == FRITIMETOSLEEP)
+        return true;
+      else
+        return false;
+    case 6:
+      if (now.hour == SATTIMETOSLEEP)
+        return true;
+      else
+        return false;
+    case 7:
+      if (now.hour == SUNTIMETOSLEEP)
+        return true;
+      else
+        return false;
+    default:
+      return false;
   }
 }
 
