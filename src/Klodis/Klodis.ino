@@ -13,7 +13,7 @@
 
 //#define DEBUG
 //#define TIMEDEBUG
-//#define SERIALINFORMATION
+#define SERIALINFORMATION
 
 #include <Elegoo_GFX.h>     // Core graphics library
 #include <Elegoo_TFTLCD.h>  // Hardware-specific library
@@ -164,12 +164,12 @@ void loop() {
   delay(suspend);
 
   // Check, if it's time to go to sleep
-  if (checkTIME2SLEEP()) {
+  if (!sleepyTime && checkTIME2SLEEP()) {
     
 #ifdef SERIALINFORMATION
-    Serial.print(rtc.getTimeStr());
-    Serial.print(" - ");
-    Serial.println("System is asleep.");
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.println("System is asleep.");
 #endif
     
     sleepyTime = true;
@@ -179,17 +179,19 @@ void loop() {
   }
 
   // Check if it's time to wake up
-  else if (checkTIME2WAKE()) {
+  else if (sleepyTime && checkTIME2WAKE()) {
 
 #ifdef SERIALINFORMATION
-    Serial.print(rtc.getTimeStr());
-    Serial.print(" - ");
-    Serial.println("System is waking up.");
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.println("System is waking up.");
 #endif
     
     sleepyTime = false;
-    wakeUP();
+    timer = 0;
     suspend = 0;
+    wakeUP();
+    
   }
 
   // Do all of this only when everybody's awake
@@ -220,10 +222,10 @@ void loop() {
         }
         
 #ifdef DEBUG
-        Serial.print(rtc.getTimeStr());
-        Serial.print(" - ");
-        Serial.print("PCis : ");
-        Serial.println(PCis);
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.print("PCis : ");
+  Serial.println(PCis);
 #endif
       }
       
@@ -238,10 +240,10 @@ void loop() {
     }
 
 #ifdef DEBUG
-    Serial.print(rtc.getTimeStr());
-    Serial.print(" - ");
-    Serial.print("final PCis : ");
-    Serial.println(PCis);
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.print("final PCis : ");
+  Serial.println(PCis);
 #endif
 
     // If PCis is positive or negative determines if the PC
@@ -262,8 +264,8 @@ int convertDAW2INT() {
 #endif
 
 #ifdef TIMEDEBUG
-    Serial.print(rtc.getTimeStr());
-    Serial.print(" - It's ");
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - It's ");
 #endif
 
   if (rtc.getDOWStr(FORMAT_SHORT) == "Mon") {
@@ -320,44 +322,39 @@ bool checkTIME2WAKE() {
 
   int intDay = convertDAW2INT();
 
-#ifdef TIMEDEBUG
-    Serial.print(rtc.getTimeStr());
-    Serial.print(" - It's ");
-#endif
-
   switch (intDay) {
     case 1:
-      if (now.hour == MONHOMEFROMSHOOL)
+      if (now.hour >= MONHOMEFROMSHOOL && now.hour < MONTIMETOSLEEP)
         return true;
       else
         return false;
     case 2:
-      if (now.hour == TUEHOMEFROMSHOOL)
+      if (now.hour >= TUEHOMEFROMSHOOL && now.hour < TUETIMETOSLEEP)
         return true;
       else
         return false;
     case 3:
-      if (now.hour == WEDHOMEFROMSHOOL)
+      if (now.hour >= WEDHOMEFROMSHOOL && now.hour < WEDTIMETOSLEEP)
         return true;
       else
         return false;
     case 4:
-      if (now.hour == THUHOMEFROMSHOOL)
+      if (now.hour >= THUHOMEFROMSHOOL && now.hour < THUTIMETOSLEEP)
         return true;
       else
         return false;
     case 5:
-      if (now.hour == FRIHOMEFROMSHOOL)
+      if (now.hour >= FRIHOMEFROMSHOOL && now.hour < FRITIMETOSLEEP)
         return true;
       else
         return false;
     case 6:
-      if (now.hour == WEEKENDAWAKE)
+      if (now.hour >= WEEKENDAWAKE && now.hour < SATTIMETOSLEEP)
         return true;
       else
         return false;
     case 7:
-      if (now.hour == WEEKENDAWAKE)
+      if (now.hour == WEEKENDAWAKE && now.hour < SUNTIMETOSLEEP)
         return true;
       else
         return false;
@@ -378,37 +375,37 @@ bool checkTIME2SLEEP() {
 
   switch (intDay) {
     case 1:
-      if (now.hour == MONTIMETOSLEEP)
+      if (now.hour >= MONTIMETOSLEEP || now.hour < MONHOMEFROMSHOOL)
         return true;
       else
         return false;
     case 2:
-      if (now.hour == TUETIMETOSLEEP)
+      if (now.hour >= TUETIMETOSLEEP || now.hour < TUEHOMEFROMSHOOL)
         return true;
       else
         return false;
     case 3:
-      if (now.hour == WEDTIMETOSLEEP)
+      if (now.hour >= WEDTIMETOSLEEP || now.hour < WEDHOMEFROMSHOOL)
         return true;
       else
         return false;
     case 4:
-      if (now.hour == THUTIMETOSLEEP)
+      if (now.hour >= THUTIMETOSLEEP || now.hour < THUHOMEFROMSHOOL)
         return true;
       else
         return false;
     case 5:
-      if (now.hour == FRITIMETOSLEEP)
+      if (now.hour >= FRITIMETOSLEEP || now.hour < FRIHOMEFROMSHOOL)
         return true;
       else
         return false;
     case 6:
-      if (now.hour == SATTIMETOSLEEP)
+      if (now.hour >= SATTIMETOSLEEP || now.hour < WEEKENDAWAKE)
         return true;
       else
         return false;
     case 7:
-      if (now.hour == SUNTIMETOSLEEP)
+      if (now.hour >= SUNTIMETOSLEEP || now.hour < WEEKENDAWAKE)
         return true;
       else
         return false;
@@ -479,11 +476,13 @@ void printTIME() {
   if (timer == 0) {
     
 #ifdef TIMEDEBUG
-    Serial.println(" == 0");
+  Serial.println(" == 0");
 #endif
 
 #ifdef SERIALINFORMATION
-    Serial.println("Time is even.");
+  Serial.print(rtc.getTimeStr());
+  Serial.print(" - ");
+  Serial.println("Time is even.");
 #endif
     
     tft.setCursor(93, 50);
@@ -500,18 +499,18 @@ void printTIME() {
   else if (timer >= 0) {
     
 #ifdef TIMEDEBUG
-    Serial.println(" >= 0");
+  Serial.println(" >= 0");
 #endif
     
     int hours = abs(timer/60);
     int minutes = abs(timer%60);
     
 #ifdef SERIALINFORMATION
-    Serial.print("You can play for ");
-    Serial.print(hours);
-    Serial.print(":");
-    Serial.print(minutes);
-    Serial.print(".");
+  Serial.print("You can play for ");
+  Serial.print(hours);
+  Serial.print(":");
+  Serial.print(minutes);
+  Serial.print(".");
 #endif
       
     if (hours <= 9)
@@ -542,11 +541,11 @@ void printTIME() {
     int minutes = abs(timer%120) / 2;
 
 #ifdef SERIALINFORMATION
-    Serial.print("Please go out for ");
-    Serial.print(hours);
-    Serial.print(":");
-    Serial.print(minutes);
-    Serial.print(". ");
+  Serial.print("Please go out for ");
+  Serial.print(hours);
+  Serial.print(":");
+  Serial.print(minutes);
+  Serial.print(". ");
 #endif
 
     if (hours <= 9)
@@ -591,14 +590,14 @@ PCmode checkPC() {
   if (digitalRead (MODIS) == HIGH) {
     
 #ifdef DEBUG
-    Serial.println(" - (ON)");
+  Serial.println(" - (ON)");
 #endif
     return ON;
   }
   else {
     
 #ifdef DEBUG
-    Serial.println(" - (OFF)");
+  Serial.println(" - (OFF)");
 #endif
     return OFF;
   }
@@ -624,14 +623,14 @@ void printINDICATOR(PCmode PC) {
     tft.print("(ON)");
     
 #ifdef DEBUG
-    Serial.println(" - (ON)");
+  Serial.println(" - (ON)");
 #endif
   }
   else {
     tft.print("(OFF)");
     
 #ifdef DEBUG
-    Serial.println(" - (OFF)");
+  Serial.println(" - (OFF)");
 #endif
   }
 }
