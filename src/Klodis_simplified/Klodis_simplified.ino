@@ -34,7 +34,7 @@
 #define MODIS A11     // Where Módís PC is connected to
 
 // The times Módís comes home from shool
-#define WEEKAWAKE 13
+#define WEEKAWAKE 18
 #define WEEKENDAWAKE 9
 
 // The times Módís goes to sleep
@@ -52,7 +52,7 @@ Time now;
 long unixTime;
 
 // Boolean to switch the device off when it's sleeping time
-bool sleepyTime = false;
+bool sleepyTime = true;
 
 // Assign human-readable names to some common 16-bit color values:
 #define BLACK     0x0000
@@ -78,7 +78,7 @@ typedef enum {OFF, ON} PCmode;
 int PCis;
 
 // To "suspend" operation while everybody's asleep anyways
-long suspend = 0;
+long suspend = 60000;
 
 void wakeUP() {
 
@@ -142,7 +142,7 @@ void setup() {
 #endif
   Serial.println();
   
-  wakeUP();
+//  wakeUP();
 }
 
 void loop() {
@@ -151,7 +151,7 @@ void loop() {
   now = rtc.getTime();
   
   // Usually don't suspend. suspend = 0
-  // Suspend for 20 minutes while everybody's asleep
+  // Suspend for 10 minutes while everybody's asleep
   delay(suspend);
 
   // Check, if it's time to go to sleep
@@ -165,8 +165,8 @@ void loop() {
     
     sleepyTime = true;
     tft.fillScreen(BLACK);
-    // Suspend for 20 minutes while everybody's asleep
-    suspend = 1200000;
+    // Suspend for 1 minutes while everybody's asleep
+    suspend = 60000;
   }
 
   // Check if it's time to wake up
