@@ -14,9 +14,9 @@
       DS3231 clock
 */
 
-#define DEBUG
-#define TIMEDEBUG
-#define SERIALINFORMATION
+//#define DEBUG
+//#define TIMEDEBUG
+//#define SERIALINFORMATION
 
 #include <Elegoo_GFX.h>     // Core graphics library
 #include <Elegoo_TFTLCD.h>  // Hardware-specific library
@@ -34,11 +34,14 @@
 #define MODIS A11     // Where Módís PC is connected to
 
 // The times Módís comes home from shool
-#define WEEKAWAKE 18
+#define WEEKAWAKE 12
 #define WEEKENDAWAKE 9
 
 // The times Módís goes to sleep
 #define TIMETOSLEEP 22
+
+//How long she's allowed to play [min]
+#define PLAYTIME 90
 
 // Init the display
 Elegoo_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
@@ -69,7 +72,7 @@ bool sleepyTime = true;
 #define ORANGE    0xFBE0
 
 // Stores the minutes that need to be balanced
-int timer = 90;
+int timer = PLAYTIME;
 
 // Enum to see if the PC is turned on
 typedef enum {OFF, ON} PCmode;
@@ -179,7 +182,7 @@ void loop() {
 #endif
     
     sleepyTime = false;
-    timer = 90;
+    timer = PLAYTIME;
     suspend = 0;
     wakeUP();
     
