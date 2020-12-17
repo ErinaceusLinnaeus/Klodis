@@ -33,15 +33,15 @@
 
 #define MODIS A11     // Where Módís PC is connected to
 
-// The times Módís comes home from shool
-#define WEEKAWAKE 12
+// The times Módís comes home from shool / wakes up
+#define WEEKAWAKE 9
 #define WEEKENDAWAKE 9
 
 // The times Módís goes to sleep
-#define TIMETOSLEEP 22
+#define TIMETOSLEEP 23
 
 //How long she's allowed to play [min]
-#define PLAYTIME 90
+#define PLAYTIME 180
 
 // Init the display
 Elegoo_TFTLCD tft(LCD_CS, LCD_CD, LCD_WR, LCD_RD, LCD_RESET);
