@@ -145,7 +145,6 @@ void setup() {
 #endif
   Serial.println();
   
-//  wakeUP();
 }
 
 void loop() {
@@ -154,7 +153,7 @@ void loop() {
   now = rtc.getTime();
   
   // Usually don't suspend. suspend = 0
-  // Suspend for 10 minutes while everybody's asleep
+  // Suspend for 1 minute while everybody's asleep
   delay(suspend);
 
   // Check, if it's time to go to sleep
@@ -347,7 +346,7 @@ bool checkTIME2WAKE() {
       else
         return false;
     case 7:
-      if (now.hour == WEEKENDAWAKE && now.hour < TIMETOSLEEP)
+      if (now.hour >= WEEKENDAWAKE && now.hour < TIMETOSLEEP)
         return true;
       else
         return false;
