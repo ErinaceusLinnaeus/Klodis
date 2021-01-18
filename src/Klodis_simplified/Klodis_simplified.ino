@@ -34,7 +34,7 @@
 #define MODIS A11     // Where Módís PC is connected to
 
 // The times Módís comes home from shool / wakes up
-#define WEEKAWAKE 13
+#define WEEKAWAKE 9
 #define WEEKENDAWAKE 9
 
 // The times Módís goes to sleep
